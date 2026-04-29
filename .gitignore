@@ -1,0 +1,25 @@
+# Database
+vda.db
+vda.db.wal
+*.db-journal
+
+# Downloads
+downloads/*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# PyInstaller
+build/
+dist/
+*.spec
+!NSE_Bhavcopy_Viewer.spec
+
+# Virtual environments
+venv/
+env/
+ENV/
