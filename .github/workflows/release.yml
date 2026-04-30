@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build macOS
+        runs-on: macos-latest
+        env:
+          TARGET: macos
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v4
+
+          - name: Set up Python
+            uses: actions/setup-python@v5
+            with:
+              python-version: '3.11'
+
+          - name: Create venv and install dependencies
+            run: |
+              python -m venv venv
+              source venv/bin/activate
+              pip install pyinstaller -r requirements.txt
+
+          - name: Build macOS app
+            run: |
+              source venv/bin/activate
+              pyinstaller vda.spec --clean
+
+          - name: Create zip for macOS
+            run: |
+              cd dist
+              zip -r ZapOrion_VDA_Analyzer-macos.zip ZapOrion_VDA_Analyzer.app
+
+          - name: Upload macOS artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: macos-binary
+              path: dist/ZapOrion_VDA_Analyzer-macos.zip
+
+      - name: Build Windows
+        runs-on: windows-latest
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v4
+
+          - name: Set up Python
+            uses: actions/setup-python@v5
+            with:
+              python-version: '3.11'
+
+          - name: Create venv and install dependencies
+            run: |
+              python -m venv venv
+              .\venv\Scripts\Activate
+              pip install pyinstaller -r requirements.txt
+
+          - name: Build Windows exe
+            run: |
+              .\venv\Scripts\Activate
+              pyinstaller vda.spec --clean
+
+          - name: Create zip for Windows
+            run: |
+              Compress-Archive -Path "dist\ZapOrion_VDA_Analyzer\*" -DestinationPath "dist\ZapOrion_VDA_Analyzer-windows.zip"
+
+          - name: Upload Windows artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: windows-binary
+              path: dist/ZapOrion_VDA_Analyzer-windows.zip
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
