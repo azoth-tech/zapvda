@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QTabWidget, QGridLayout, QStatusBar, QToolBar, QToolButton, QCompleter
 )
 from PySide6.QtCore import Qt, QThread, Signal, QDate, QAbstractTableModel
-from PySide6.QtGui import QFont, QIcon, QAction
+from PySide6.QtGui import QFont, QIcon, QAction, QPixmap
 import pandas as pd
 import matplotlib
 import warnings
@@ -105,23 +105,30 @@ class DownloadThread(QThread):
         self.downloader = NSEDownloader()
 
     def run(self):
-        results = self.downloader.download_range(
-            self.from_date, 
-            self.to_date,
-            progress_callback=lambda r: self.progress.emit(
-                f"{r['date']}: {r['message']}"
+        try:
+            results = self.downloader.download_range(
+                self.from_date, 
+                self.to_date,
+                progress_callback=lambda r: self.progress.emit(
+                    f"{r['date']}: {r['message']}"
+                )
             )
-        )
 
-        # Insert successful downloads into DB
-        for result in results:
-            if result['success'] and result['df'] is not None:
-                date_obj = datetime.strptime(result['date'], '%d-%m-%Y')
-                date_str = date_obj.strftime('%d%m%Y')
-                count = self.db.insert_data(result['df'], date_str)
-                self.progress.emit(f"  -> Inserted {count} records into DB")
+            # Insert successful downloads into DB
+            for result in results:
+                if result['success'] and result['df'] is not None:
+                    date_obj = datetime.strptime(result['date'], '%d-%m-%Y')
+                    date_str = date_obj.strftime('%d%m%Y')
+                    count = self.db.insert_data(result['df'], date_str)
+                    self.progress.emit(f"  -> Inserted {count} records into DB")
 
-        self.finished_download.emit(results)
+            self.finished_download.emit(results)
+        except Exception as e:
+            import traceback
+            error_msg = f"Download thread crashed: {e}\n{traceback.format_exc()}"
+            logger.error(error_msg)
+            self.progress.emit(error_msg)
+            self.finished_download.emit([])
 
 
 class MainWindow(QMainWindow):
@@ -823,7 +830,6 @@ class MainWindow(QMainWindow):
 
         filters = {
             'symbol': self.symbol_filter.text().upper().strip(),
-            'series': self.series_filter.currentText() if self.series_filter.currentText() != "All" else "",
             'from_date': self.filter_from_date.date().toPython(),
             'to_date': self.filter_to_date.date().toPython()
         }
@@ -882,7 +888,6 @@ class MainWindow(QMainWindow):
         if reply == QMessageBox.Yes:
             try:
                 self.db.conn.execute("DELETE FROM bhavcopy_data")
-                self.db.conn.execute("DELETE FROM bhavcopy_data")  # Ensure table exists
                 self._update_stats()
                 self.apply_filters()
                 self.agg_model.set_data(pd.DataFrame())
@@ -969,6 +974,26 @@ def main():
     if hasattr(sys, 'frozen'):
         sys.stdout = open(os.devnull, 'w')
         sys.stderr = open(os.devnull, 'w')
+        if sys.platform == 'darwin':
+            cert_path = os.path.join(os.path.dirname(sys.executable), '..', 'Resources', 'certifi', 'cacert.pem')
+        else:
+            cert_path = os.path.join(sys._MEIPASS, 'certifi', 'cacert.pem')
+        os.environ['SSL_CERT_FILE'] = os.path.normpath(cert_path)
+        logger.info(f"SSL_CERT_FILE set to {os.environ['SSL_CERT_FILE']}")
+
+    # Show splash screen
+    if hasattr(sys, 'frozen'):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    splash_path = os.path.join(base_dir, 'splash.jpeg')
+    splash = None
+    if os.path.exists(splash_path):
+        pixmap = QPixmap(splash_path)
+        from PySide6.QtWidgets import QSplashScreen
+        splash = QSplashScreen(pixmap)
+        splash.show()
+        app.processEvents()
 
     font = QFont("Helvetica Neue", 11)
     app.setFont(font)
@@ -977,6 +1002,10 @@ def main():
     window = MainWindow()
     logger.info("MainWindow created")
     window.show()
+
+    if splash:
+        splash.finish(window)
+
     logger.info("Window shown, entering event loop...")
     sys.exit(app.exec())
 

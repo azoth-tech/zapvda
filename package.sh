@@ -29,11 +29,16 @@ echo "=========================================="
 echo "   Build Complete!"
 echo "=========================================="
 echo ""
-echo "Executable: dist/ZapOrion_VDA_Analyzer"
+
+if [ "$(uname)" = "Darwin" ]; then
+    echo "macOS App Bundle: dist/ZapOrion_VDA_Analyzer.app"
+    echo ""
+    echo "To run:  open dist/ZapOrion_VDA_Analyzer.app"
+else
+    echo "Executable: dist/ZapOrion_VDA_Analyzer/ZapOrion_VDA_Analyzer"
+    chmod +x dist/ZapOrion_VDA_Analyzer/ZapOrion_VDA_Analyzer 2>/dev/null
+fi
+
 echo ""
-
-# Make dist executable
-chmod +x dist/ZapOrion_VDA_Analyzer 2>/dev/null
-
 echo "Press Enter to exit..."
 read

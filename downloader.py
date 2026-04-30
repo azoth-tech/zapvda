@@ -5,14 +5,20 @@ import requests
 import zipfile
 import io
 import os
+import logging
 from datetime import datetime, timedelta
 import polars as pl
 import time
 
+logger = logging.getLogger(__name__)
+
 class NSEDownloader:
-    def __init__(self, download_dir="downloads"):
+    def __init__(self, download_dir=None):
+        if download_dir is None:
+            download_dir = os.path.join(os.path.expanduser('~/.zaporion/vda'), 'downloads')
         self.download_dir = download_dir
         os.makedirs(download_dir, exist_ok=True)
+        logger.info(f"NSEDownloader initialized, download_dir={self.download_dir}")
 
         # NSE requires specific headers to avoid blocking
         self.headers = {

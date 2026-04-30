@@ -14,7 +14,9 @@ REM Activate virtual environment
 echo Activating virtual environment...
 call venv\Scripts\activate.bat
 
-REM Install PyInstaller if not present
+REM Install dependencies
+echo Installing dependencies...
+pip install -r requirements.txt >nul 2>&1
 python -c "import PyInstaller" >nul 2>&1
 if errorlevel 1 (
     echo Installing PyInstaller...
@@ -30,7 +32,7 @@ echo ==========================================
 echo    Build Complete!
 echo ==========================================
 echo.
-echo Executable: dist\ZapOrion_VDA_Analyzer.exe
+echo Executable: dist\ZapOrion_VDA_Analyzer\ZapOrion_VDA_Analyzer.exe
 echo.
 
 pause
