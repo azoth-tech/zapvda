@@ -4,6 +4,20 @@ Main UI Application for ZapOrion VDA Analyzer
 DISPLAY_LIMIT = 5000
 import sys
 import os
+import traceback
+import logging
+
+log_dir = os.path.expanduser('~/.zaporion/vda')
+os.makedirs(log_dir, exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(os.path.join(log_dir, 'app.log'))
+    ]
+)
+logger = logging.getLogger(__name__)
+
 from datetime import datetime, timedelta
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -16,7 +30,11 @@ from PySide6.QtCore import Qt, QThread, Signal, QDate, QAbstractTableModel
 from PySide6.QtGui import QFont, QIcon, QAction
 import pandas as pd
 import matplotlib
+import warnings
+warnings.filterwarnings('ignore')
 matplotlib.use('Agg')
+import matplotlib
+matplotlib.rcParams['font.family'] = 'sans-serif'
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
@@ -109,11 +127,13 @@ class DownloadThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        logger.info("MainWindow init start")
         self.setWindowTitle("ZapOrion VDA Analyzer")
         self.setGeometry(100, 100, 1500, 950)
 
-        # Initialize database
+        logger.info("Initializing database...")
         self.db = BhavcopyDB()
+        logger.info("Database initialized")
 
         # Current data
         self.current_data = pd.DataFrame()
@@ -941,17 +961,36 @@ class MainWindow(QMainWindow):
 
 
 def main():
+    logger.info("Starting application...")
     app = QApplication(sys.argv)
+    logger.info("QApplication created")
     app.setStyle('Fusion')
 
-    # Set application font - larger and nicer
-    font = QFont("Segoe UI", 11)
+    if hasattr(sys, 'frozen'):
+        sys.stdout = open(os.devnull, 'w')
+        sys.stderr = open(os.devnull, 'w')
+
+    font = QFont("Helvetica Neue", 11)
     app.setFont(font)
 
+    logger.info("Creating MainWindow...")
     window = MainWindow()
+    logger.info("MainWindow created")
     window.show()
+    logger.info("Window shown, entering event loop...")
     sys.exit(app.exec())
 
 
 if __name__ == "__main__":
-    main()
+    import traceback
+    import os
+    log_dir = os.path.expanduser("~/.zaporion/vda")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "error.log")
+
+    try:
+        main()
+    except Exception as e:
+        with open(log_file, "w") as f:
+            f.write(f"Error: {e}\n\n{traceback.format_exc()}")
+        print(f"Error: {e}\nCheck log: {log_file}")

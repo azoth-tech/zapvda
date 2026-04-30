@@ -5,15 +5,20 @@ import duckdb
 import os
 from datetime import datetime
 import polars as pl
+import logging
+
+logger = logging.getLogger(__name__)
 
 class BhavcopyDB:
     def __init__(self, db_path=None):
+        logger.info(f"Init start, db_path={db_path}")
         if db_path is None:
             db_path = os.path.expanduser("~/.zaporion/vda/vda.db")
         db_dir = os.path.dirname(db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
         self.db_path = db_path
+        logger.info(f"DB path: {self.db_path}")
         import glob
         for lock_file in glob.glob(f"{db_path}*"):
             if 'lock' in lock_file or 'wal' in lock_file or 'shm' in lock_file:
@@ -21,8 +26,11 @@ class BhavcopyDB:
                     os.remove(lock_file)
                 except:
                     pass
+        logger.info("Connecting to DuckDB...")
         self.conn = duckdb.connect(db_path)
+        logger.info("Connected, initializing tables...")
         self._init_tables()
+        logger.info("Done init")
 
     def _init_tables(self):
         """Initialize database tables."""
