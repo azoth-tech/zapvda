@@ -21,17 +21,20 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-          pip install pyinstaller -r requirements.txt
+          pip install -r requirements.txt
+          pip install pyinstaller
 
       - name: Build macOS app
         run: |
           source venv/bin/activate
           pyinstaller vda.spec --clean
+        working-directory: ${{ github.workspace }}
 
       - name: Create zip for macOS
         run: |
           cd dist
           zip -r ZapOrion_VDA_Analyzer-macos.zip ZapOrion_VDA_Analyzer.app
+        working-directory: ${{ github.workspace }}
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
@@ -54,16 +57,20 @@ jobs:
         run: |
           python -m venv venv
           .\venv\Scripts\Activate
-          pip install pyinstaller -r requirements.txt
+          pip install -r requirements.txt
+          pip install pyinstaller
+        working-directory: ${{ github.workspace }}
 
       - name: Build Windows exe
         run: |
           .\venv\Scripts\Activate
           pyinstaller vda.spec --clean
+        working-directory: ${{ github.workspace }}
 
       - name: Create zip for Windows
         run: |
           Compress-Archive -Path "dist\ZapOrion_VDA_Analyzer\*" -DestinationPath "dist\ZapOrion_VDA_Analyzer-windows.zip"
+        working-directory: ${{ github.workspace }}
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
